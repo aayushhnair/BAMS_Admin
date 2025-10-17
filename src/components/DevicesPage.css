@@ -1,0 +1,27 @@
+.devices-page {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.info-box {
+  background: linear-gradient(135deg, rgba(30, 144, 255, 0.1), rgba(255, 215, 0, 0.1));
+  padding: 1.5rem;
+  border-radius: 12px;
+  border-left: 4px solid var(--primary-blue);
+  margin-top: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.info-box h3 {
+  margin: 0 0 1rem 0;
+  color: var(--primary-blue);
+  font-weight: 700;
+}
+
+.info-box p {
+  margin: 0.5rem 0;
+  color: var(--text-dark);
+  line-height: 1.6;
+}
+
