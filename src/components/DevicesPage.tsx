@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Smartphone, Plus, X, Trash2, Loader2 } from 'lucide-react';
 import { deviceService } from '../services/deviceService';
 import { companyService } from '../services/companyService';
 import type { Company, Device } from '../types';
@@ -7,6 +8,9 @@ import './DevicesPage.css';
 const DevicesPage: React.FC = () => {
   const [devices, setDevices] = useState<Device[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -20,25 +24,42 @@ const DevicesPage: React.FC = () => {
   });
 
   useEffect(() => {
-    loadCompanies();
-    loadDevices();
+    loadData();
   }, []);
 
   useEffect(() => {
     loadDevices();
   }, [filterCompanyId]);
 
-  const loadCompanies = async () => {
-    const result = await companyService.getCompanies();
-    if (result.ok) setCompanies(result.companies || []);
+  const loadData = async () => {
+    setLoading(true);
+    const [companiesRes, devicesRes] = await Promise.all([
+      companyService.getCompanies(),
+      deviceService.getDevices(filterCompanyId || undefined)
+    ]);
+
+    if (companiesRes.ok) setCompanies(companiesRes.companies || []);
+    if (devicesRes.ok) {
+      setDevices(devicesRes.devices || []);
+    } else {
+      setError(devicesRes.message || 'Failed to load devices');
+    }
+    setLoading(false);
   };
 
   const loadDevices = async () => {
-    const result = await deviceService.getDevices(filterCompanyId || undefined);
-    if (result.ok) {
-      setDevices(result.devices || []);
-    } else {
-      setError(result.message || 'Failed to load devices');
+    setLoading(true);
+    try {
+      const result = await deviceService.getDevices(filterCompanyId || undefined);
+      if (result.ok) {
+        setDevices(result.devices || []);
+      } else {
+        setError(result.message || 'Failed to load devices');
+      }
+    } catch (err: any) {
+      setError(err.message || 'An error occurred');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -46,16 +67,23 @@ const DevicesPage: React.FC = () => {
     e.preventDefault();
     setError('');
     setSuccess('');
+    setSubmitting(true);
 
-    const result = await deviceService.registerDevice(formData);
-    
-    if (result.ok) {
-      setSuccess(`Device registered successfully! ${result.message || ''}`);
-      setShowForm(false);
-      setFormData({ deviceId: '', serial: '', name: '', companyId: '' });
-      loadDevices();
-    } else {
-      setError(result.message || 'Failed to register device');
+    try {
+      const result = await deviceService.registerDevice(formData);
+      
+      if (result.ok) {
+        setSuccess('Device registered successfully!');
+        setShowForm(false);
+        setFormData({ deviceId: '', serial: '', name: '', companyId: '' });
+        await loadDevices();
+      } else {
+        setError(result.message || 'Failed to register device');
+      }
+    } catch (err: any) {
+      setError(err.message || 'An error occurred');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -66,14 +94,21 @@ const DevicesPage: React.FC = () => {
 
     setError('');
     setSuccess('');
+    setDeletingId(deviceId);
 
-    const result = await deviceService.deleteDevice(deviceId);
-    
-    if (result.ok) {
-      setSuccess('Device deleted successfully!');
-      loadDevices();
-    } else {
-      setError(result.message || 'Failed to delete device');
+    try {
+      const result = await deviceService.deleteDevice(deviceId);
+      
+      if (result.ok) {
+        setSuccess('Device deleted successfully!');
+        await loadDevices();
+      } else {
+        setError(result.message || 'Failed to delete device');
+      }
+    } catch (err: any) {
+      setError(err.message || 'An error occurred');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -82,15 +117,21 @@ const DevicesPage: React.FC = () => {
     return new Date(dateString).toLocaleString();
   };
 
+  const getCompanyName = (device: Device) => {
+    if (device.companyName) return device.companyName;
+    const company = companies.find(c => c._id === device.companyId);
+    return company?.name || device.companyId || '-';
+  };
+
   return (
     <div className="devices-page">
       <div className="page-header">
         <h1>
-          <span className="page-icon">📱</span>
+          <span className="page-icon"><Smartphone size={28} strokeWidth={2} /></span>
           Device Management
         </h1>
         <button onClick={() => setShowForm(!showForm)} className="btn-primary">
-          {showForm ? '✖️ Cancel' : '➕ Register Device'}
+          {showForm ? <><X size={18} /> Cancel</> : <><Plus size={18} /> Register Device</>}
         </button>
       </div>
 
@@ -109,6 +150,7 @@ const DevicesPage: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, deviceId: e.target.value })}
                 placeholder="DEVICE-001"
                 required
+                disabled={submitting}
               />
             </div>
 
@@ -119,6 +161,7 @@ const DevicesPage: React.FC = () => {
                 value={formData.serial}
                 onChange={(e) => setFormData({ ...formData, serial: e.target.value })}
                 placeholder="SN123456"
+                disabled={submitting}
               />
             </div>
 
@@ -130,6 +173,7 @@ const DevicesPage: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Employee Tablet 1"
                 required
+                disabled={submitting}
               />
             </div>
 
@@ -139,6 +183,7 @@ const DevicesPage: React.FC = () => {
                 value={formData.companyId}
                 onChange={(e) => setFormData({ ...formData, companyId: e.target.value })}
                 required
+                disabled={submitting}
               >
                 <option value="">Select Company</option>
                 {companies.map(c => (
@@ -147,7 +192,9 @@ const DevicesPage: React.FC = () => {
               </select>
             </div>
 
-            <button type="submit" className="btn-primary">Register Device</button>
+            <button type="submit" className="btn-primary" disabled={submitting}>
+              {submitting ? 'Registering...' : 'Register Device'}
+            </button>
           </form>
         </div>
       )}
@@ -159,6 +206,7 @@ const DevicesPage: React.FC = () => {
           <select
             value={filterCompanyId}
             onChange={(e) => setFilterCompanyId(e.target.value)}
+            disabled={loading}
           >
             <option value="">All Companies</option>
             {companies.map(c => (
@@ -172,6 +220,7 @@ const DevicesPage: React.FC = () => {
         <table>
           <thead>
             <tr>
+              <th>#</th>
               <th>Device ID</th>
               <th>Serial</th>
               <th>Device Name</th>
@@ -181,22 +230,30 @@ const DevicesPage: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {devices.length === 0 ? (
-              <tr><td colSpan={6}>No devices found</td></tr>
+            {loading ? (
+              <tr><td colSpan={7} className="loading-cell">
+                <div className="loading-spinner"></div>
+                <span>Loading devices...</span>
+              </td></tr>
+            ) : devices.length === 0 ? (
+              <tr><td colSpan={7} className="empty-cell">No devices found</td></tr>
             ) : (
-              devices.map(device => (
+              devices.map((device, index) => (
                 <tr key={device.id || device._id}>
+                  <td className="serial-number">{index + 1}</td>
                   <td>{device.deviceId}</td>
                   <td>{device.serial || '-'}</td>
                   <td>{device.name || device.deviceName || '-'}</td>
-                  <td>{device.companyName || device.companyId}</td>
+                  <td>{getCompanyName(device)}</td>
                   <td>{formatDate(device.lastSeen)}</td>
-                  <td>
+                  <td className="actions-cell">
                     <button 
                       onClick={() => handleDelete(device.id || device._id || '')}
-                      className="btn-danger"
+                      className="btn-icon btn-danger"
+                      disabled={deletingId === (device.id || device._id)}
+                      title="Delete Device"
                     >
-                      🗑️ Delete
+                      {deletingId === (device.id || device._id) ? <Loader2 size={16} className="spin" /> : <Trash2 size={16} />}
                     </button>
                   </td>
                 </tr>
@@ -207,8 +264,8 @@ const DevicesPage: React.FC = () => {
       </div>
 
       <div className="info-box">
-        <h3>Device Registration</h3>
-        <p>Register devices here and assign them to users in the Users page.</p>
+        <h3><Smartphone size={20} /> Device Management</h3>
+        <p>Register devices and assign them to users in the Users page.</p>
         <p>Each device can only be assigned to one user at a time.</p>
       </div>
     </div>

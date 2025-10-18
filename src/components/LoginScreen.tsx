@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import authService from '../services/authService';
-import logo from '../assets/logo_with_tagline.png';
 import './LoginScreen.css';
 
-const LoginScreen: React.FC = () => {
+interface LoginScreenProps {
+  onLoginSuccess?: () => void;
+}
+
+const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -18,8 +21,13 @@ const LoginScreen: React.FC = () => {
       const result = await authService.login(username, password);
       
       if (result.ok) {
-        // Force page reload to update authentication state
-        window.location.href = '/';
+        // Call the callback to update parent state
+        if (onLoginSuccess) {
+          onLoginSuccess();
+        } else {
+          // Fallback to reload if no callback provided
+          window.location.href = '/';
+        }
       } else {
         setError(result.message || 'Login failed');
       }
@@ -33,8 +41,12 @@ const LoginScreen: React.FC = () => {
   return (
     <div className="login-container">
       <div className="login-box">
-        <img src={logo} alt="BAMS Logo" className="login-logo" />
-        <h1>Admin Panel</h1>
+        <div className="worksens-branding">
+          <h1 className="worksens-logo">
+            Work<span className="worksens-logo-accent">Sens</span>
+          </h1>
+          <p className="worksens-tagline">Admin Portal</p>
+        </div>
         <h2>Sign In</h2>
         
         {error && <div className="error-message">{error}</div>}

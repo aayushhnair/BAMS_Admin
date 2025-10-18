@@ -8,21 +8,24 @@ import DevicesPage from './components/DevicesPage';
 import LocationsPage from './components/LocationsPage';
 import SessionsPage from './components/SessionsPage';
 import UserReportPage from './components/UserReportPage';
-import logo from './assets/logo_with_tagline.png';
+import logo from './assets/logo_with_tagline_white.png';
 import './App.css';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = React.useState(authService.isAuthenticated());
   const user = authService.getUser();
 
-  const handleLogout = () => {
-    authService.logout();
+  const handleLogout = async () => {
+    await authService.logout();
     setIsAuthenticated(false);
-    window.location.href = '/';
+  };
+
+  const handleLoginSuccess = () => {
+    setIsAuthenticated(true);
   };
 
   if (!isAuthenticated) {
-    return <LoginScreen />;
+    return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
   }
 
   return (
@@ -64,7 +67,7 @@ function App() {
 
           <div className="sidebar-footer">
             <button onClick={handleLogout} className="logout-btn">
-              <LogOut className="btn-icon" size={18} />
+              {/* <LogOut className="btn-icon" size={18} /> */}
               <span>Logout</span>
             </button>
           </div>

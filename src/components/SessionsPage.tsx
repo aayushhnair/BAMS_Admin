@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { BarChart3, RefreshCw, Download } from 'lucide-react';
 import { sessionService } from '../services/sessionService';
 import { userService } from '../services/userService';
 import { companyService } from '../services/companyService';
@@ -21,7 +22,8 @@ const SessionsPage: React.FC = () => {
     userId: '',
     status: '',
     from: '',
-    to: ''
+    to: '',
+    showAll: false
   });
 
   useEffect(() => {
@@ -129,7 +131,7 @@ const SessionsPage: React.FC = () => {
     <div className="sessions-page">
       <div className="page-header">
         <h1>
-          <span className="page-icon">📊</span>
+          <span className="page-icon"><BarChart3 size={28} strokeWidth={2} /></span>
           Session Management
         </h1>
         <div className="header-actions">
@@ -139,13 +141,13 @@ const SessionsPage: React.FC = () => {
               checked={autoRefresh}
               onChange={(e) => setAutoRefresh(e.target.checked)}
             />
-            ⟳ Auto Refresh (30s)
+            <RefreshCw size={16} /> Auto Refresh (30s)
           </label>
           <button onClick={loadSessions} className="btn-secondary">
-            🔄 Refresh Now
+            <RefreshCw size={18} /> Refresh Now
           </button>
           <button onClick={handleExport} className="btn-primary">
-            📥 Export CSV
+            <Download size={18} /> Export CSV
           </button>
         </div>
       </div>
@@ -209,6 +211,17 @@ const SessionsPage: React.FC = () => {
               value={filters.to}
               onChange={(e) => setFilters({ ...filters, to: e.target.value })}
             />
+          </div>
+
+          <div className="form-group">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={filters.showAll}
+                onChange={(e) => setFilters({ ...filters, showAll: e.target.checked })}
+              />
+              <span>📋 Show All Sessions (last 30 days by default)</span>
+            </label>
           </div>
         </div>
       </div>

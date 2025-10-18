@@ -12,6 +12,7 @@ export const sessionService = {
     to?: string;
     skip?: number;
     limit?: number;
+    showAll?: boolean;
   }): Promise<ApiResponse> {
     try {
       const params = new URLSearchParams();
@@ -22,6 +23,7 @@ export const sessionService = {
       if (filters?.to && filters.to !== '') params.append('to', filters.to);
       if (filters?.skip !== undefined) params.append('skip', filters.skip.toString());
       if (filters?.limit !== undefined) params.append('limit', filters.limit.toString());
+      if (filters?.showAll) params.append('showAll', 'true');
       
       const response = await axios.get<ApiResponse>(`${API_URL}/sessions?${params.toString()}`);
       return response.data;

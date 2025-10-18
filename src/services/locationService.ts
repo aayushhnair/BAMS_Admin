@@ -48,5 +48,27 @@ export const locationService = {
         message: error.response?.data?.message || 'Failed to delete location'
       };
     }
+  },
+
+  async updateLocation(id: string, updates: {
+    name?: string;
+    lat?: number;
+    lon?: number;
+    radiusMeters?: number;
+    companyId?: string;
+  }): Promise<ApiResponse> {
+    try {
+      const response = await axios.post<ApiResponse>(`${API_URL}/locations/update`, {
+        id,
+        ...updates
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Update location error:', error);
+      return {
+        ok: false,
+        message: error.response?.data?.message || 'Failed to update location'
+      };
+    }
   }
 };

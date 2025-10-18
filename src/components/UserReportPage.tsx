@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Download, Calendar, BarChart3, TrendingUp, CalendarDays } from 'lucide-react';
 import { userService } from '../services/userService';
 import './UserReportPage.css';
 
@@ -94,13 +95,13 @@ const UserReportPage: React.FC = () => {
       <div className="page-header">
         <div>
           <button onClick={() => navigate('/users')} className="btn-back">
-            ← Back to Users
+            <ArrowLeft size={18} /> Back to Users
           </button>
           <h1>{report?.user.displayName || 'User'} - Work Report</h1>
           <p className="username-subtitle">@{report?.user.username}</p>
         </div>
         <button onClick={handleExport} className="btn-primary" disabled={!report}>
-          📥 Export CSV
+          <Download size={18} /> Export CSV
         </button>
       </div>
 
@@ -114,25 +115,25 @@ const UserReportPage: React.FC = () => {
               className={reportType === 'daily' ? 'active' : ''}
               onClick={() => setReportType('daily')}
             >
-              📅 Daily
+              <Calendar size={16} /> Daily
             </button>
             <button 
               className={reportType === 'weekly' ? 'active' : ''}
               onClick={() => setReportType('weekly')}
             >
-              📊 Weekly
+              <BarChart3 size={16} /> Weekly
             </button>
             <button 
               className={reportType === 'monthly' ? 'active' : ''}
               onClick={() => setReportType('monthly')}
             >
-              📈 Monthly
+              <TrendingUp size={16} /> Monthly
             </button>
             <button 
               className={reportType === 'yearly' ? 'active' : ''}
               onClick={() => setReportType('yearly')}
             >
-              📆 Yearly
+              <CalendarDays size={16} /> Yearly
             </button>
           </div>
         </div>
@@ -159,7 +160,7 @@ const UserReportPage: React.FC = () => {
             
             <div className="summary-cards">
               <div className="summary-card">
-                <div className="card-icon">📊</div>
+                <div className="card-icon"><BarChart3 size={28} strokeWidth={2.5} /></div>
                 <div className="card-content">
                   <div className="card-value">{report.totalSessions}</div>
                   <div className="card-label">Total Sessions</div>
@@ -175,7 +176,7 @@ const UserReportPage: React.FC = () => {
               </div> */}
 
               <div className="summary-card">
-                <div className="card-icon">⏰</div>
+                <div className="card-icon"><Calendar size={28} strokeWidth={2.5} /></div>
                 <div className="card-content">
                   <div className="card-value">{formatDuration(report.totalWorkingMinutes)}</div>
                   <div className="card-label">Total Time</div>
@@ -183,7 +184,7 @@ const UserReportPage: React.FC = () => {
               </div>
 
               <div className="summary-card">
-                <div className="card-icon">📈</div>
+                <div className="card-icon"><TrendingUp size={28} strokeWidth={2.5} /></div>
                 <div className="card-content">
                   <div className="card-value">
                     {report.totalSessions > 0 
