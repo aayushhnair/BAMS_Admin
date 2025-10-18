@@ -110,25 +110,26 @@ const UsersPage: React.FC = () => {
     }
   };
 
-  const handleAssignDevice = async (userId: string) => {
-    const deviceId = prompt('Enter Device ID to assign:');
-    if (!deviceId) return;
+  // TODO: Implement device assignment UI
+  // const handleAssignDevice = async (userId: string) => {
+  //   const deviceId = prompt('Enter Device ID to assign:');
+  //   if (!deviceId) return;
 
-    setError('');
-    setSuccess('');
+  //   setError('');
+  //   setSuccess('');
 
-    try {
-      const result = await userService.assignDevice(userId, deviceId);
-      if (result.ok) {
-        setSuccess('Device assigned successfully!');
-        await loadData();
-      } else {
-        setError(result.message || 'Failed to assign device');
-      }
-    } catch (err: any) {
-      setError(err.message || 'An error occurred');
-    }
-  };
+  //   try {
+  //     const result = await userService.assignDevice(userId, deviceId);
+  //     if (result.ok) {
+  //       setSuccess('Device assigned successfully!');
+  //       await loadData();
+  //     } else {
+  //       setError(result.message || 'Failed to assign device');
+  //     }
+  //   } catch (err: any) {
+  //     setError(err.message || 'An error occurred');
+  //   }
+  // };
 
   const handleEdit = (user: User) => {
     setEditingUser(user);

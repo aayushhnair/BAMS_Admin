@@ -1,6 +1,6 @@
 ﻿import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
-import { Users, Smartphone, MapPin, Activity, LogOut } from 'lucide-react';
+import { Users, Smartphone, MapPin, Activity } from 'lucide-react';
 import authService from './services/authService';
 import LoginScreen from './components/LoginScreen';
 import UsersPage from './components/UsersPage';

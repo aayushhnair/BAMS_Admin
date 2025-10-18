@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { ApiResponse, Location } from '../types';
+import type { ApiResponse } from '../types';
 
 const API_URL = '/api';
 
