@@ -2,15 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, Plus, X, Edit, Trash2, BarChart3, Loader2 } from 'lucide-react';
 import { userService } from '../services/userService';
-import { companyService } from '../services/companyService';
 import { locationService } from '../services/locationService';
-import type { User, Company, Location } from '../types';
+import authService from '../services/authService';
+import type { User, Location } from '../types';
 import './UsersPage.css';
 
 const UsersPage: React.FC = () => {
   const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]);
+  // company-scoped: no companies list; use logged-in company only
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -28,14 +28,17 @@ const UsersPage: React.FC = () => {
     role: 'employee' as 'admin' | 'employee',
     companyId: '',
     assignedDeviceId: '',
-    allocatedLocationId: ''
+    allocatedLocationId: '',
+    // Default to true so employees require location validation unless changed
+    locationValidationRequired: true
   });
 
   const [editFormData, setEditFormData] = useState({
     displayName: '',
     password: '',
     assignedDeviceId: '',
-    allocatedLocationId: ''
+    allocatedLocationId: '',
+    locationValidationRequired: true
   });
 
   useEffect(() => {
@@ -44,14 +47,13 @@ const UsersPage: React.FC = () => {
 
   const loadData = async () => {
     setLoading(true);
-    const [usersRes, companiesRes, locationsRes] = await Promise.all([
-      userService.getUsers(),
-      companyService.getCompanies(),
-      locationService.getLocations()
+    const companyId = authService.getCompanyId() || '';
+    const [usersRes, locationsRes] = await Promise.all([
+      userService.getUsers(companyId),
+      locationService.getLocations(companyId)
     ]);
 
     if (usersRes.ok) setUsers(usersRes.users || []);
-    if (companiesRes.ok) setCompanies(companiesRes.companies || []);
     if (locationsRes.ok) setLocations(locationsRes.locations || []);
     setLoading(false);
   };
@@ -63,8 +65,16 @@ const UsersPage: React.FC = () => {
     setSubmitting(true);
 
     try {
-      const result = await userService.createUser(formData);
-      
+      const companyId = authService.getCompanyId() || '';
+      if (!companyId) {
+        throw new Error('No company context found. Please log in again.');
+      }
+
+      const result = await userService.createUser({
+        ...formData,
+        companyId
+      });
+
       if (result.ok) {
         setSuccess('User created successfully!');
         setShowForm(false);
@@ -75,7 +85,8 @@ const UsersPage: React.FC = () => {
           role: 'employee',
           companyId: '',
           assignedDeviceId: '',
-          allocatedLocationId: ''
+          allocatedLocationId: '',
+          locationValidationRequired: true
         });
         await loadData();
       } else {
@@ -90,7 +101,7 @@ const UsersPage: React.FC = () => {
 
   const handleDelete = async (userId: string) => {
     if (!confirm('Are you sure you want to delete this user?')) return;
-    
+
     setError('');
     setSuccess('');
     setDeletingId(userId);
@@ -137,7 +148,8 @@ const UsersPage: React.FC = () => {
       displayName: user.displayName,
       password: '',
       assignedDeviceId: user.assignedDeviceId || '',
-      allocatedLocationId: user.allocatedLocationId || ''
+      allocatedLocationId: user.allocatedLocationId || '',
+      locationValidationRequired: user.locationValidationRequired !== undefined ? user.locationValidationRequired : true
     });
     setShowEditModal(true);
   };
@@ -157,9 +169,10 @@ const UsersPage: React.FC = () => {
       if (editFormData.password) updates.password = editFormData.password;
       if (editFormData.assignedDeviceId) updates.assignedDeviceId = editFormData.assignedDeviceId;
       if (editFormData.allocatedLocationId) updates.allocatedLocationId = editFormData.allocatedLocationId;
+      if (editFormData.locationValidationRequired !== undefined) updates.locationValidationRequired = editFormData.locationValidationRequired;
 
       const result = await userService.updateUser(editingUser._id, updates);
-      
+
       if (result.ok) {
         setSuccess('User updated successfully!');
         setShowEditModal(false);
@@ -240,29 +253,14 @@ const UsersPage: React.FC = () => {
             </div>
 
             {formData.role === 'employee' && (
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Company</label>
-                  <select
-                    value={formData.companyId}
-                    onChange={(e) => setFormData({ ...formData, companyId: e.target.value })}
-                  >
-                    <option value="">Select Company</option>
-                    {companies.map(c => (
-                      <option key={c._id} value={c._id}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label>Assigned Device ID</label>
-                  <input
-                    type="text"
-                    value={formData.assignedDeviceId}
-                    onChange={(e) => setFormData({ ...formData, assignedDeviceId: e.target.value })}
-                    placeholder="DEVICE-001"
-                  />
-                </div>
+              <div className="form-group">
+                <label>Assigned Device ID</label>
+                <input
+                  type="text"
+                  value={formData.assignedDeviceId}
+                  onChange={(e) => setFormData({ ...formData, assignedDeviceId: e.target.value })}
+                  placeholder="DEVICE-001"
+                />
               </div>
             )}
 
@@ -281,6 +279,19 @@ const UsersPage: React.FC = () => {
               </div>
             )}
 
+            {formData.role === 'employee' && (
+                <div className="form-group">
+                <label style={{ display: 'flex', alignItems: 'center' }}>
+                  <input
+                  type="checkbox"
+                  style={{ transform: 'scale(1.5)', margin: '5px', width: 'fit-content' }} // Adjust size and spacing
+                  checked={!!formData.locationValidationRequired}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, locationValidationRequired: e.target.checked })}
+                  />
+                  Require Location Validation
+                </label>
+                </div>
+            )}
             <button type="submit" className="btn-primary" disabled={submitting}>
               {submitting ? 'Creating...' : 'Create User'}
             </button>
@@ -298,6 +309,7 @@ const UsersPage: React.FC = () => {
               <th>Role</th>
               <th>Assigned Device</th>
               <th>Location</th>
+              <th>Location Validation</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -318,22 +330,23 @@ const UsersPage: React.FC = () => {
                   <td><span className={`badge badge-${user.role}`}>{user.role}</span></td>
                   <td>{user.assignedDeviceId || '-'}</td>
                   <td>{locations.find(l => (l.id || l._id) === user.allocatedLocationId)?.name || '-'}</td>
+                  <td>{user.locationValidationRequired ? 'Required' : 'Not Required'}</td>
                   <td className="actions-cell">
-                    <button 
+                    <button
                       onClick={() => navigate(`/user-report/${user._id}`)}
                       className="btn-icon btn-info"
                       title="View Report"
                     >
                       <BarChart3 size={16} />
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleEdit(user)}
                       className="btn-icon btn-warning"
                       title="Edit User"
                     >
                       <Edit size={16} />
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleDelete(user._id)}
                       className="btn-icon btn-danger"
                       disabled={deletingId === user._id}
@@ -357,7 +370,7 @@ const UsersPage: React.FC = () => {
               <h2>Edit User: {editingUser.username}</h2>
               <button className="modal-close" onClick={() => setShowEditModal(false)}><X size={20} /></button>
             </div>
-            
+
             <form onSubmit={handleUpdateUser}>
               <div className="form-group">
                 <label>Display Name</label>
@@ -404,17 +417,31 @@ const UsersPage: React.FC = () => {
                 </div>
               )}
 
+              {editingUser.role === 'employee' && (
+                <div className="form-group checkbox-group">
+                  <label>
+                    <input
+                      type="checkbox"
+                      style={{ transform: 'scale(1.5)', margin: '5px', width: 'fit-content' }} 
+                      checked={!!editFormData.locationValidationRequired}
+                      onChange={(e) => setEditFormData({ ...editFormData, locationValidationRequired: e.target.checked })}
+                    />
+                    Require Location Validation
+                  </label>
+                </div>
+              )}
+
               <div className="modal-actions">
-                <button 
-                  type="button" 
-                  onClick={() => setShowEditModal(false)} 
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
                   className="btn-secondary"
                   disabled={submitting}
                 >
                   Cancel
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className="btn-primary"
                   disabled={submitting}
                 >

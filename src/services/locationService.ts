@@ -1,7 +1,6 @@
 import axios from 'axios';
 import type { ApiResponse } from '../types';
-
-const API_URL = '/api';
+import { API_URL } from '../config/api';
 
 export const locationService = {
   async getLocations(companyId?: string): Promise<ApiResponse> {

@@ -1,7 +1,6 @@
 import axios from 'axios';
 import type { ApiResponse, Device } from '../types';
-
-const API_URL = '/api';
+import { API_URL } from '../config/api';
 
 export const deviceService = {
   async registerDevice(deviceData: {

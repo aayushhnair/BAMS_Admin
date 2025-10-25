@@ -1,7 +1,6 @@
 import axios from 'axios';
 import type { ApiResponse } from '../types';
-
-const API_URL = '/api';
+import { API_URL } from '../config/api';
 
 export const sessionService = {
   async getSessions(filters?: {
@@ -13,6 +12,7 @@ export const sessionService = {
     skip?: number;
     limit?: number;
     showAll?: boolean;
+    suspect?: boolean;
   }): Promise<ApiResponse> {
     try {
       const params = new URLSearchParams();
@@ -24,8 +24,10 @@ export const sessionService = {
       if (filters?.skip !== undefined) params.append('skip', filters.skip.toString());
       if (filters?.limit !== undefined) params.append('limit', filters.limit.toString());
       if (filters?.showAll) params.append('showAll', 'true');
+  if (filters?.suspect) params.append('suspect', 'true');
       
-      const response = await axios.get<ApiResponse>(`${API_URL}/sessions?${params.toString()}`);
+  // Admin listing endpoint (supports suspect and status comma lists)
+  const response = await axios.get<ApiResponse>(`${API_URL}/sessions?${params.toString()}`);
       return response.data;
     } catch (error: any) {
       console.error('Get sessions error:', error);
@@ -59,6 +61,33 @@ export const sessionService = {
     } catch (error: any) {
       console.error('Export sessions error:', error);
       throw new Error('Failed to export sessions');
+    }
+  }
+,
+
+  async resolveSession(sessionId: string): Promise<ApiResponse> {
+    try {
+      const response = await axios.post<ApiResponse>(`${API_URL}/admin/session/${sessionId}/resolve`);
+      return response.data;
+    } catch (error: any) {
+      console.error('Resolve session error:', error);
+      return {
+        ok: false,
+        message: error.response?.data?.message || 'Failed to resolve session'
+      };
+    }
+  },
+
+  async forceLogoutSession(sessionId: string): Promise<ApiResponse> {
+    try {
+      const response = await axios.post<ApiResponse>(`${API_URL}/admin/session/${sessionId}/logout`);
+      return response.data;
+    } catch (error: any) {
+      console.error('Force logout error:', error);
+      return {
+        ok: false,
+        message: error.response?.data?.message || 'Failed to force logout session'
+      };
     }
   }
 };

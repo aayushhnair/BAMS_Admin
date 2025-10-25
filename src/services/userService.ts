@@ -1,7 +1,6 @@
 import axios from 'axios';
 import type { ApiResponse, User } from '../types';
-
-const API_URL = '/api';
+import { API_URL } from '../config/api';
 
 export const userService = {
   async getUsers(companyId?: string, role?: string): Promise<ApiResponse> {
@@ -29,6 +28,7 @@ export const userService = {
     companyId?: string;
     assignedDeviceId?: string;
     allocatedLocationId?: string;
+    locationValidationRequired?: boolean;
   }): Promise<ApiResponse> {
     try {
       const endpoint = userData.role === 'admin' 
@@ -74,7 +74,7 @@ export const userService = {
 
   async assignDevice(userId: string, deviceId: string): Promise<ApiResponse> {
     try {
-      const response = await axios.post<ApiResponse>(`${API_URL}/admin/assign-device`, {
+      const response = await axios.post<ApiResponse>(`${API_URL}/assign-device`, {
         userId,
         deviceId
       });

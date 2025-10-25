@@ -197,41 +197,46 @@ const UserReportPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="sessions-details">
+            <div className="sessions-details">
             <h3>Session Details</h3>
             <div className="table-container">
               <table>
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Login Time</th>
-                    <th>Logout Time</th>
-                    <th>Duration</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {report.sessions.length === 0 ? (
-                    <tr><td colSpan={5}>No sessions found for this period</td></tr>
-                  ) : (
-                    report.sessions.map((session, index) => (
-                      <tr key={session.sessionId}>
-                        <td>{index + 1}</td>
-                        <td>{formatDate(session.loginAt)}</td>
-                        <td>{formatDate(session.logoutAt)}</td>
-                        <td>{formatDuration(session.workingMinutes)}</td>
-                        <td>
-                          <span className={`status-badge status-${session.status}`}>
-                            {session.status}
+              <thead>
+                <tr>
+                <th>#</th>
+                <th>Login Time</th>
+                <th>Logout Time</th>
+                <th>Duration</th>
+                <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.sessions.length === 0 ? (
+                <tr><td colSpan={5}>No sessions found for this period</td></tr>
+                ) : (
+                [...report.sessions].reverse().map((session, index) => (
+                  <tr key={session.sessionId}>
+                  <td>{index + 1}</td>
+                  <td>{formatDate(session.loginAt)}</td>
+                  <td>{formatDate(session.logoutAt)}</td>
+                  <td>{formatDuration(session.workingMinutes)}</td>
+                      <td>
+                        <span className={`status-badge status-${session.status}`}>
+                          {session.status}
+                        </span>
+                        {('suspect' in session) && (session as any).suspect && (
+                          <span className="status-badge status-suspect" style={{ marginLeft: 8 }}>
+                            Suspect
                           </span>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
+                        )}
+                      </td>
+                  </tr>
+                ))
+                )}
+              </tbody>
               </table>
             </div>
-          </div>
+            </div>
         </>
       ) : (
         <div className="empty-state">No report data available</div>

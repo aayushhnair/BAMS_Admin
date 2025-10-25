@@ -36,6 +36,8 @@ export interface User {
   companyId?: string;
   assignedDeviceId?: string;
   allocatedLocationId?: string;
+  // If true, location validation is required for this user (employees)
+  locationValidationRequired?: boolean;
 }
 
 // Company Types
@@ -106,4 +108,8 @@ export interface Session {
     accuracy?: number;
   };
   lastHeartbeat?: string;
+  // If true, this session has been marked as suspect due to consecutive poor heartbeats
+  suspect?: boolean;
+  // Number of consecutive poor heartbeat readings (if provided by API)
+  consecutivePoorHeartbeats?: number;
 }

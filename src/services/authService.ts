@@ -1,11 +1,11 @@
 import axios from 'axios';
 import type { LoginPayload, ApiResponse, User } from '../types';
-
-const API_URL = '/api';
+import { API_URL } from '../config/api';
 
 class AuthService {
   private sessionId: string | null = null;
   private user: User | null = null;
+  private companyId: string | null = null;
 
   constructor() {
     // Load session from localStorage
@@ -14,6 +14,7 @@ class AuthService {
       const data = JSON.parse(stored);
       this.sessionId = data.sessionId;
       this.user = data.user;
+      this.companyId = data.companyId || data.user?.companyId || null;
     }
   }
 
@@ -40,11 +41,13 @@ class AuthService {
         const verifyResponse = await this.verifySession(response.data.sessionId);
         if (verifyResponse.ok && verifyResponse.user) {
           this.user = verifyResponse.user;
+          this.companyId = (verifyResponse.user as any).companyId || (verifyResponse as any).companyId || null;
           
           // Store session
           localStorage.setItem('bams_session', JSON.stringify({
             sessionId: this.sessionId,
-            user: this.user
+            user: this.user,
+            companyId: this.companyId
           }));
         }
       }
@@ -94,6 +97,7 @@ class AuthService {
     
     this.sessionId = null;
     this.user = null;
+    this.companyId = null;
     localStorage.removeItem('bams_session');
   }
 
@@ -107,6 +111,10 @@ class AuthService {
 
   getSessionId(): string | null {
     return this.sessionId;
+  }
+
+  getCompanyId(): string | null {
+    return this.companyId || this.user?.companyId || null;
   }
 }
 

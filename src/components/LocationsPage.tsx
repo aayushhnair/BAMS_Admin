@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { MapPin, Plus, X, Edit, Trash2, Loader2 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Circle, useMapEvents } from 'react-leaflet';
 import { locationService } from '../services/locationService';
-import { companyService } from '../services/companyService';
-import type { Location, Company } from '../types';
+import authService from '../services/authService';
+import type { Location } from '../types';
 import 'leaflet/dist/leaflet.css';
 import './LocationsPage.css';
 
@@ -31,7 +31,7 @@ function MapClickHandler({ onClick }: { onClick: (lat: number, lon: number) => v
 
 const LocationsPage: React.FC = () => {
   const [locations, setLocations] = useState<Location[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]);
+  // company-scoped: no companies list; use logged-in company only
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -65,13 +65,9 @@ const LocationsPage: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [locationsRes, companiesRes] = await Promise.all([
-        locationService.getLocations(),
-        companyService.getCompanies()
-      ]);
-
+      const companyId = authService.getCompanyId() || '';
+      const locationsRes = await locationService.getLocations(companyId);
       if (locationsRes.ok) setLocations(locationsRes.locations || []);
-      if (companiesRes.ok) setCompanies(companiesRes.companies || []);
     } catch (err: any) {
       setError(err.message || 'Failed to load data');
     } finally {
@@ -90,7 +86,9 @@ const LocationsPage: React.FC = () => {
     setSubmitting(true);
 
     try {
-      const result = await locationService.createLocation(formData);
+      const companyId = authService.getCompanyId() || '';
+      if (!companyId) throw new Error('No company context found. Please log in again.');
+      const result = await locationService.createLocation({ ...formData, companyId });
       
       if (result.ok) {
         setSuccess('Location created successfully!');
@@ -286,19 +284,6 @@ const LocationsPage: React.FC = () => {
                 />
               </div>
 
-              <div className="form-group">
-                <label>Company *</label>
-                <select
-                  value={formData.companyId}
-                  onChange={(e) => setFormData({ ...formData, companyId: e.target.value })}
-                  required
-                >
-                  <option value="">Select Company</option>
-                  {companies.map(c => (
-                    <option key={c._id} value={c._id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
             </div>
 
             <div className="current-coords">
@@ -321,7 +306,6 @@ const LocationsPage: React.FC = () => {
               <th>Latitude</th>
               <th>Longitude</th>
               <th>Radius (m)</th>
-              <th>Company</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -341,7 +325,6 @@ const LocationsPage: React.FC = () => {
                   <td>{location.lat?.toFixed(6) || location.coords?.coordinates?.[1]?.toFixed(6) || 'N/A'}</td>
                   <td>{location.lon?.toFixed(6) || location.coords?.coordinates?.[0]?.toFixed(6) || 'N/A'}</td>
                   <td>{location.radiusMeters}m</td>
-                  <td>{companies.find(c => c._id === location.companyId)?.name || location.companyId || '-'}</td>
                   <td className="actions-cell">
                     <button 
                       onClick={() => handleEdit(location)}
@@ -418,18 +401,6 @@ const LocationsPage: React.FC = () => {
                   />
                 </div>
 
-                <div className="form-group">
-                  <label>Company</label>
-                  <select
-                    value={editFormData.companyId}
-                    onChange={(e) => setEditFormData({ ...editFormData, companyId: e.target.value })}
-                  >
-                    <option value="">Select Company</option>
-                    {companies.map(c => (
-                      <option key={c._id} value={c._id}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
               </div>
 
               <div className="modal-actions">

@@ -1,29 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, RefreshCw, Download } from 'lucide-react';
+import { BarChart3, RefreshCw, Download, Loader2 } from 'lucide-react';
 import { sessionService } from '../services/sessionService';
 import { userService } from '../services/userService';
-import { companyService } from '../services/companyService';
-import type { Session, User, Company } from '../types';
+import authService from '../services/authService';
+import type { Session, User } from '../types';
 import './SessionsPage.css';
 
 const SessionsPage: React.FC = () => {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]);
+  // Company is fixed to the logged-in admin's company
+  const companyId = authService.getCompanyId() || '';
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [success, setSuccess] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalSessions, setTotalSessions] = useState(0);
   const pageSize = 50;
 
   const [filters, setFilters] = useState({
-    companyId: '',
+    companyId: companyId,
     userId: '',
     status: '',
     from: '',
     to: '',
-    showAll: false
+    showAll: false,
+    suspect: false
   });
 
   useEffect(() => {
@@ -40,37 +42,22 @@ const SessionsPage: React.FC = () => {
     loadSessions();
   }, [currentPage]);
 
-  useEffect(() => {
-    let interval: number | null = null;
-    
-    if (autoRefresh) {
-      interval = window.setInterval(() => {
-        loadSessions();
-      }, 30000); // 30 seconds
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [autoRefresh, filters, currentPage]);
+  // auto-refresh removed per request
 
   const loadMetadata = async () => {
-    const [usersRes, companiesRes] = await Promise.all([
-      userService.getUsers(),
-      companyService.getCompanies()
-    ]);
-
+    const usersRes = await userService.getUsers(companyId);
     if (usersRes.ok) setUsers(usersRes.users || []);
-    if (companiesRes.ok) setCompanies(companiesRes.companies || []);
   };
 
   const loadSessions = async () => {
     setLoading(true);
     setError('');
+    setSuccess('');
     
     const skip = (currentPage - 1) * pageSize;
     const result = await sessionService.getSessions({
       ...filters,
+      companyId: companyId,
       skip,
       limit: pageSize
     });
@@ -102,9 +89,78 @@ const SessionsPage: React.FC = () => {
     }
   };
 
+  const [resolvingId, setResolvingId] = useState<string | null>(null);
+  const [forcingId, setForcingId] = useState<string | null>(null);
+
+  const handleResolve = async (sessionId: string) => {
+    if (!confirm('Restore this suspect session to active?')) return;
+    setError('');
+    setSuccess('');
+    setResolvingId(sessionId);
+    try {
+      const res = await sessionService.resolveSession(sessionId);
+      if (res.ok) {
+        setSuccess(res.message || 'Session restored to active');
+        await loadSessions();
+      } else {
+        setError(res.message || 'Failed to restore session');
+      }
+    } catch (err: any) {
+      setError(err.message || 'An error occurred');
+    } finally {
+      setResolvingId(null);
+    }
+  };
+
+  const handleForceLogout = async (sessionId: string) => {
+    if (!confirm('Force-logout this session?')) return;
+    setError('');
+    setSuccess('');
+    setForcingId(sessionId);
+    try {
+      const res = await sessionService.forceLogoutSession(sessionId);
+      if (res.ok) {
+        setSuccess(res.message || 'Session force-logged out');
+        await loadSessions();
+      } else {
+        setError(res.message || 'Failed to force logout session');
+      }
+    } catch (err: any) {
+      setError(err.message || 'An error occurred');
+    } finally {
+      setForcingId(null);
+    }
+  };
+
   const formatDate = (dateString?: string) => {
     if (!dateString) return '-';
     return new Date(dateString).toLocaleString();
+  };
+
+  const renderLastHeartbeat = (session: Session) => {
+    const val = session.lastHeartbeat as any;
+
+    // If lastHeartbeat is present and is a valid date string, show formatted date
+    if (val) {
+      const parsed = Date.parse(val);
+      if (!isNaN(parsed)) return formatDate(val);
+    }
+
+    // Normalize status for checks
+    const status = (session.status || '').toString().toUpperCase();
+
+    // If status indicates an auto / heartbeat logout or the lastHeartbeat contains a heartbeat marker,
+    // show the explanatory badge instead of a date.
+    if (
+      status.includes('AUTO_LOGGED_OUT') ||
+      status.includes('HEARTBEAT') ||
+      (val && val.toString().toUpperCase().includes('HEARTBEAT'))
+    ) {
+      return <span className="status-badge status-heartbeat-missed">Heartbeat Logged Out</span>;
+    }
+
+    // Fallback
+    return '-';
   };
 
   const calculateDuration = (session: Session) => {
@@ -135,14 +191,14 @@ const SessionsPage: React.FC = () => {
           Session Management
         </h1>
         <div className="header-actions">
-          <label className="auto-refresh-label">
+          {/* <label className="auto-refresh-label">
             <input
               type="checkbox"
               checked={autoRefresh}
               onChange={(e) => setAutoRefresh(e.target.checked)}
             />
             <RefreshCw size={16} /> Auto Refresh (30s)
-          </label>
+          </label> */}
           <button onClick={loadSessions} className="btn-secondary">
             <RefreshCw size={18} /> Refresh Now
           </button>
@@ -155,18 +211,7 @@ const SessionsPage: React.FC = () => {
       <div className="filters-card">
         <h3>Filters</h3>
         <div className="filters-grid">
-          <div className="form-group">
-            <label>Company</label>
-            <select
-              value={filters.companyId}
-              onChange={(e) => setFilters({ ...filters, companyId: e.target.value })}
-            >
-              <option value="">All Companies</option>
-              {companies.map(c => (
-                <option key={c._id} value={c._id}>{c.name}</option>
-              ))}
-            </select>
-          </div>
+          {/* Company is fixed - no company switcher for admins */}
 
           <div className="form-group">
             <label>User</label>
@@ -189,9 +234,12 @@ const SessionsPage: React.FC = () => {
             >
               <option value="">All Status</option>
               <option value="active">Active</option>
-              <option value="logged_out">Logged Out</option>
               <option value="expired">Expired</option>
+              <option value="active,expired">Active + Expired</option>
+              <option value="logged_out">Logged Out</option>
               <option value="auto_logged_out">Auto Logged Out</option>
+              <option value="logged_out,auto_logged_out">Logged Out + Auto Logged Out</option>
+              <option value="heartbeat_timeout">Heartbeat Timeout</option>
             </select>
           </div>
 
@@ -223,10 +271,21 @@ const SessionsPage: React.FC = () => {
               <span>📋 Show All Sessions (last 30 days by default)</span>
             </label>
           </div>
+          <div className="form-group">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={filters.suspect}
+                onChange={(e) => setFilters({ ...filters, suspect: e.target.checked })}
+              />
+              <span>⚠️ Suspect only</span>
+            </label>
+          </div>
         </div>
       </div>
 
       {error && <div className="alert alert-error">{error}</div>}
+  {success && <div className="alert alert-success">{success}</div>}
 
       <div className="table-container">
         <table>
@@ -239,13 +298,14 @@ const SessionsPage: React.FC = () => {
               <th>Work Hours</th>
               <th>Status</th>
               <th>Last Heartbeat</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7}>Loading sessions...</td></tr>
+              <tr><td colSpan={8}>Loading sessions...</td></tr>
             ) : sessions.length === 0 ? (
-              <tr><td colSpan={7}>No sessions found</td></tr>
+              <tr><td colSpan={8}>No sessions found</td></tr>
             ) : (
               sessions.map(session => (
                 <tr key={session._id}>
@@ -258,8 +318,35 @@ const SessionsPage: React.FC = () => {
                     <span className={`status-badge status-${session.status}`}>
                       {session.status}
                     </span>
+                    {session.suspect && (
+                      <span className="status-badge status-suspect" style={{ marginLeft: 8 }}>
+                        Suspect
+                      </span>
+                    )}
                   </td>
-                  <td>{formatDate(session.lastHeartbeat)}</td>
+                  <td>
+                    {renderLastHeartbeat(session)}
+                  </td>
+                  <td className="actions-cell">
+                    <button
+                      onClick={() => handleResolve(session.sessionId || session._id)}
+                      className="btn-secondary"
+                      disabled={!session.suspect || resolvingId === (session.sessionId || session._id)}
+                      title={session.suspect ? 'Restore session to active' : 'Resolve only available for suspect sessions'}
+                    >
+                      {resolvingId === (session.sessionId || session._id) ? <Loader2 size={14} /> : 'Resolve'}
+                    </button>
+
+                    <button
+                      onClick={() => handleForceLogout(session.sessionId || session._id)}
+                      className="btn-danger"
+                      disabled={forcingId === (session.sessionId || session._id)}
+                      style={{ marginLeft: 8 }}
+                      title="Force logout this session"
+                    >
+                      {forcingId === (session.sessionId || session._id) ? <Loader2 size={14} /> : 'Kick Out'}
+                    </button>
+                  </td>
                 </tr>
               ))
             )}

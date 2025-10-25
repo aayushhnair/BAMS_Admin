@@ -1,56 +1,43 @@
 import React, { useState, useEffect } from 'react';
 import { Smartphone, Plus, X, Trash2, Loader2 } from 'lucide-react';
 import { deviceService } from '../services/deviceService';
-import { companyService } from '../services/companyService';
-import type { Company, Device } from '../types';
+import authService from '../services/authService';
+import type { Device } from '../types';
 import './DevicesPage.css';
 
 const DevicesPage: React.FC = () => {
   const [devices, setDevices] = useState<Device[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [filterCompanyId, setFilterCompanyId] = useState('');
 
   const [formData, setFormData] = useState({
     deviceId: '',
     serial: '',
-    name: '',
-    companyId: ''
+    name: ''
   });
 
   useEffect(() => {
     loadData();
   }, []);
 
-  useEffect(() => {
-    loadDevices();
-  }, [filterCompanyId]);
-
   const loadData = async () => {
     setLoading(true);
-    const [companiesRes, devicesRes] = await Promise.all([
-      companyService.getCompanies(),
-      deviceService.getDevices(filterCompanyId || undefined)
-    ]);
-
-    if (companiesRes.ok) setCompanies(companiesRes.companies || []);
-    if (devicesRes.ok) {
-      setDevices(devicesRes.devices || []);
-    } else {
-      setError(devicesRes.message || 'Failed to load devices');
-    }
+    const companyId = authService.getCompanyId() || '';
+    const devicesRes = await deviceService.getDevices(companyId);
+    if (devicesRes.ok) setDevices(devicesRes.devices || []);
+    else setError(devicesRes.message || 'Failed to load devices');
     setLoading(false);
   };
 
   const loadDevices = async () => {
     setLoading(true);
     try {
-      const result = await deviceService.getDevices(filterCompanyId || undefined);
+      const companyId = authService.getCompanyId() || '';
+      const result = await deviceService.getDevices(companyId);
       if (result.ok) {
         setDevices(result.devices || []);
       } else {
@@ -70,12 +57,14 @@ const DevicesPage: React.FC = () => {
     setSubmitting(true);
 
     try {
-      const result = await deviceService.registerDevice(formData);
+      const companyId = authService.getCompanyId() || '';
+      if (!companyId) throw new Error('No company context found. Please log in again.');
+      const result = await deviceService.registerDevice({ ...formData, companyId });
       
       if (result.ok) {
         setSuccess('Device registered successfully!');
         setShowForm(false);
-        setFormData({ deviceId: '', serial: '', name: '', companyId: '' });
+        setFormData({ deviceId: '', serial: '', name: '' });
         await loadDevices();
       } else {
         setError(result.message || 'Failed to register device');
@@ -117,11 +106,7 @@ const DevicesPage: React.FC = () => {
     return new Date(dateString).toLocaleString();
   };
 
-  const getCompanyName = (device: Device) => {
-    if (device.companyName) return device.companyName;
-    const company = companies.find(c => c._id === device.companyId);
-    return company?.name || device.companyId || '-';
-  };
+  // company-scoped UI: no need to render company name
 
   return (
     <div className="devices-page">
@@ -177,20 +162,7 @@ const DevicesPage: React.FC = () => {
               />
             </div>
 
-            <div className="form-group">
-              <label>Company *</label>
-              <select
-                value={formData.companyId}
-                onChange={(e) => setFormData({ ...formData, companyId: e.target.value })}
-                required
-                disabled={submitting}
-              >
-                <option value="">Select Company</option>
-                {companies.map(c => (
-                  <option key={c._id} value={c._id}>{c.name}</option>
-                ))}
-              </select>
-            </div>
+            {/* Company is derived from logged-in context */}
 
             <button type="submit" className="btn-primary" disabled={submitting}>
               {submitting ? 'Registering...' : 'Register Device'}
@@ -198,23 +170,7 @@ const DevicesPage: React.FC = () => {
           </form>
         </div>
       )}
-
-      <div className="filters-card">
-        <h3>Filters</h3>
-        <div className="form-group">
-          <label>Company</label>
-          <select
-            value={filterCompanyId}
-            onChange={(e) => setFilterCompanyId(e.target.value)}
-            disabled={loading}
-          >
-            <option value="">All Companies</option>
-            {companies.map(c => (
-              <option key={c._id} value={c._id}>{c.name}</option>
-            ))}
-          </select>
-        </div>
-      </div>
+      {/* Company filter removed; all data is scoped to the logged-in company */}
 
       <div className="table-container">
         <table>
@@ -224,7 +180,6 @@ const DevicesPage: React.FC = () => {
               <th>Device ID</th>
               <th>Serial</th>
               <th>Device Name</th>
-              <th>Company</th>
               <th>Last Seen</th>
               <th>Actions</th>
             </tr>
@@ -244,7 +199,6 @@ const DevicesPage: React.FC = () => {
                   <td>{device.deviceId}</td>
                   <td>{device.serial || '-'}</td>
                   <td>{device.name || device.deviceName || '-'}</td>
-                  <td>{getCompanyName(device)}</td>
                   <td>{formatDate(device.lastSeen)}</td>
                   <td className="actions-cell">
                     <button 

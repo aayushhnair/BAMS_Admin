@@ -295,9 +295,22 @@ code {
   color: white;
 }
 
+/* Heartbeat auto logout: prominent cyan highlight */
 .status-auto_logged_out {
-  background: var(--color-warning);
-  color: var(--color-primary);
+  background: linear-gradient(135deg, var(--color-secondary), var(--color-hover-cyan));
+  color: white;
+}
+
+/* Dedicated badge for heartbeat-missed in Last Heartbeat column */
+.status-heartbeat-missed {
+  background: linear-gradient(135deg, var(--color-secondary), var(--color-hover-cyan));
+  color: white;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 /* Alerts */
