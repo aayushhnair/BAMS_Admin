@@ -1,0 +1,23 @@
+.instructions-page {
+  padding: 20px;
+}
+
+.instructions-content {
+  background: #fff;
+  border-radius: 8px;
+  padding: 18px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.instructions-content section {
+  margin-bottom: 16px;
+}
+
+.instructions-content h3 {
+  margin-bottom: 8px;
+}
+
+.instructions-content ol,
+.instructions-content ul {
+  margin-left: 18px;
+}

@@ -1,0 +1,27 @@
+Admin
+Open -> Worksens.vercel.app on the device you want to create
+install the webpage as PWA on the system. Once installed open the window u will get a device ID
+Copy it create -> Add device basod on that id onto Worksens admin / devices
+Create Location. Either pin point using maps or get Long and Lat from Maps and enter the location
+Radius. 400 to 800m
+Once both created ADD user Enter all the details create user. (Select location req if needed)
+Admin can track the Details in Session window and user specific details in User window including user report
+
+Working
+
+Once the employee logs into perticlular location the web page Continuosly triggers Heartbeat Like connection every 10 mins with the server. if he moves out of the location. for longer period his account may get flagged and the admin will have the privilage contact him or to kick him out. if the user is getting wrong location for more than hour he is kicied out automatically. 
+Session time of per day is set to 10 hours. The user will log out irrespectve of anything after 10 hours
+
+Status Explanatiion
+
+Active =
+Hearbeat_logout = 
+Expired =
+Logged out =
+Auto Logged out =
+Suspected = 
+
+To create admin users Contact the creater avnxk3@gmail.com
+Developer name Manifesto
+
+

@@ -1,12 +1,13 @@
 ﻿import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
-import { Users, Smartphone, MapPin, Activity } from 'lucide-react';
+import { Users, Smartphone, MapPin, Activity, Monitor, Info } from 'lucide-react';
 import authService from './services/authService';
 import LoginScreen from './components/LoginScreen';
 import UsersPage from './components/UsersPage';
 import DevicesPage from './components/DevicesPage';
 import LocationsPage from './components/LocationsPage';
 import SessionsPage from './components/SessionsPage';
+import InstructionsPage from './components/InstructionsPage';
 import UserReportPage from './components/UserReportPage';
 import logo from './assets/logo_with_tagline_white.png';
 import './App.css';
@@ -63,6 +64,12 @@ function App() {
                 <span className="nav-text">Sessions</span>
               </Link>
             </li>
+            <li>
+              <Link to="/instructions">
+                <Info className="nav-icon" size={18} />
+                <span className="nav-text">Instructions</span>
+              </Link>
+            </li>
           </ul>
 
           <div className="sidebar-footer">
@@ -81,6 +88,7 @@ function App() {
             <Route path="/devices" element={<DevicesPage />} />
             <Route path="/locations" element={<LocationsPage />} />
             <Route path="/sessions" element={<SessionsPage />} />
+            <Route path="/instructions" element={<InstructionsPage />} />
           </Routes>
         </main>
       </div>
